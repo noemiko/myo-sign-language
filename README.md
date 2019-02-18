@@ -19,3 +19,13 @@ used to recognize words in hand movements.
 The project classified 18 words and with the proposed approach satisfactory
 results were obtained showing performance of 91%.
 
+# How to
+
+```
+source venv/bin/activate
+
+python3 data_saver/saver.py
+python data_saver/myo_connector.py
+
+
+```
