@@ -2,7 +2,6 @@
 
 This program listens on defined port and save data to disk.
 """
-import argparse
 from datetime import datetime
 import csv
 import time
@@ -82,19 +81,6 @@ class Saver(object):
         self.server.serve_forever()
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(
-        description='Connects to OSC server that send data from MYO')
-    parser.add_argument('-a', '--address', dest='address',
-                        help='Write down numbers that represent port where is data sended".')
-
-    args = parser.parse_args()
-    port_to_listen = None
-    default_port = 3002
-    if args.address:
-        port_to_listen = args.address
-        print("Get data from user port {}".format(args.address))
-    else:
-        port_to_listen = default_port
-    saver = Saver().start_listen(port_to_listen)
-    saver.start_new_record()
+def run(port):
+    saver = Saver().start_listen(port)
+    saver.start_recording()

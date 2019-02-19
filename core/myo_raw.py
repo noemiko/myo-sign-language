@@ -2,7 +2,6 @@ from __future__ import print_function
 
 import enum
 import re
-import struct
 import sys
 import threading
 import time
@@ -10,7 +9,9 @@ import time
 import serial
 from serial.tools.list_ports import comports
 
-from common import *
+from core.common import pack
+from core.common import unpack
+
 
 def multichr(ords):
     if sys.version_info[0] >= 3:
@@ -18,21 +19,25 @@ def multichr(ords):
     else:
         return ''.join(map(chr, ords))
 
+
 def multiord(b):
     if sys.version_info[0] >= 3:
         return list(b)
     else:
         return map(ord, b)
 
+
 class Arm(enum.Enum):
     UNKNOWN = 0
     RIGHT = 1
     LEFT = 2
 
+
 class XDirection(enum.Enum):
     UNKNOWN = 0
     X_TOWARD_WRIST = 1
     X_TOWARD_ELBOW = 2
+
 
 class Pose(enum.Enum):
     REST = 0
@@ -53,12 +58,13 @@ class Packet(object):
 
     def __repr__(self):
         return 'Packet(%02X, %02X, %02X, [%s])' % \
-            (self.typ, self.cls, self.cmd,
-             ' '.join('%02X' % b for b in multiord(self.payload)))
+               (self.typ, self.cls, self.cmd,
+                ' '.join('%02X' % b for b in multiord(self.payload)))
 
 
 class BT(object):
     '''Implements the non-Myo-specific details of the Bluetooth protocol.'''
+
     def __init__(self, tty):
         self.ser = serial.Serial(port=tty, baudrate=9600, dsrdtr=1)
         self.buf = []
@@ -115,14 +121,18 @@ class BT(object):
         self.handlers.append(h)
 
     def remove_handler(self, h):
-        try: self.handlers.remove(h)
-        except ValueError: pass
+        try:
+            self.handlers.remove(h)
+        except ValueError:
+            pass
 
     def wait_event(self, cls, cmd):
         res = [None]
+
         def h(p):
             if p.cls == cls and p.cmd == cmd:
                 res[0] = p
+
         self.add_handler(h)
         while res[0] is None:
             self.recv_packet()
@@ -290,17 +300,16 @@ class MyoRaw(object):
             elif attr == 0x23:
                 typ, val, xdir = unpack('3B', pay)
 
-                if typ == 1: # on arm
+                if typ == 1:  # on arm
                     self.on_arm(Arm(val), XDirection(xdir))
-                elif typ == 2: # removed from arm
+                elif typ == 2:  # removed from arm
                     self.on_arm(Arm.UNKNOWN, XDirection.UNKNOWN)
-                elif typ == 3: # pose
+                elif typ == 3:  # pose
                     self.on_pose(Pose(val))
             else:
                 print('data with unknown attr: %02X %s' % (attr, p))
 
         self.bt.add_handler(handle_data)
-
 
     def write_attr(self, attr, val):
         if self.conn is not None:
@@ -367,7 +376,6 @@ class MyoRaw(object):
             ## first byte tells it to vibrate; purpose of second byte is unknown
             self.write_attr(0x19, pack('3B', 3, 1, length))
 
-
     def add_emg_handler(self, h):
         self.emg_handlers.append(h)
 
@@ -379,7 +387,6 @@ class MyoRaw(object):
 
     def add_arm_handler(self, h):
         self.arm_handlers.append(h)
-
 
     def on_emg(self, emg, moving):
         for h in self.emg_handlers:
@@ -402,6 +409,7 @@ if __name__ == '__main__':
     try:
         import pygame
         from pygame.locals import *
+
         HAVE_PYGAME = True
     except ImportError:
         HAVE_PYGAME = False
@@ -411,6 +419,8 @@ if __name__ == '__main__':
         scr = pygame.display.set_mode((w, h))
 
     last_vals = None
+
+
     def plot(scr, vals):
         DRAW_LINES = False
 
@@ -421,15 +431,15 @@ if __name__ == '__main__':
 
         D = 5
         scr.scroll(-D)
-        scr.fill((0,0,0), (w - D, 0, w, h))
+        scr.fill((0, 0, 0), (w - D, 0, w, h))
         for i, (u, v) in enumerate(zip(last_vals, vals)):
             if DRAW_LINES:
-                pygame.draw.line(scr, (0,255,0),
-                                 (w - D, int(h/8 * (i+1 - u))),
-                                 (w, int(h/8 * (i+1 - v))))
-                pygame.draw.line(scr, (255,255,255),
-                                 (w - D, int(h/8 * (i+1))),
-                                 (w, int(h/8 * (i+1))))
+                pygame.draw.line(scr, (0, 255, 0),
+                                 (w - D, int(h / 8 * (i + 1 - u))),
+                                 (w, int(h / 8 * (i + 1 - v))))
+                pygame.draw.line(scr, (255, 255, 255),
+                                 (w - D, int(h / 8 * (i + 1))),
+                                 (w, int(h / 8 * (i + 1))))
             else:
                 c = int(255 * max(0, min(1, v)))
                 scr.fill((c, c, c), (w - D, i * h / 8, D, (i + 1) * h / 8 - i * h / 8));
@@ -437,7 +447,9 @@ if __name__ == '__main__':
         pygame.display.flip()
         last_vals = vals
 
+
     m = MyoRaw(sys.argv[1] if len(sys.argv) >= 2 else None)
+
 
     def proc_emg(emg, moving, times=[]):
         if HAVE_PYGAME:
@@ -449,8 +461,9 @@ if __name__ == '__main__':
         ## print framerate of received data
         times.append(time.time())
         if len(times) > 20:
-            #print((len(times) - 1) / (times[-1] - times[0]))
+            # print((len(times) - 1) / (times[-1] - times[0]))
             times.pop(0)
+
 
     m.add_emg_handler(proc_emg)
     m.connect()

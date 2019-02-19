@@ -19,11 +19,10 @@ from myo.myohw import IMU_Mode
 from myo.myohw import Sleep_Mode
 from myo.myohw import Classifier_Mode
 
-import argparse
 from datetime import datetime
 from pythonosc import udp_client
 
-osc_client = None
+global osc_client
 
 
 def proc_imu(quat, acc, gyro):
@@ -40,11 +39,6 @@ def proc_emg(emg_data):
     osc_client.send_message("/emg", data_to_send)
 
 
-def proc_battery(battery_level):
-    # print("Battery", battery_level, end='\r')
-    osc_client.send_message("/battery", battery_level)
-
-
 def listen_on_myo():
     # Setup Myo Connection
     # m = Myo()  # scan for USB bluetooth adapter and start the serial connection automatically
@@ -52,7 +46,6 @@ def listen_on_myo():
     m = MyoRaw(tty="/dev/ttyACM0")  # Linux
     m.add_emg_handler(proc_emg)
     m.add_imu_handler(proc_imu)
-    m.add_battery_handler(proc_battery)
 
     # m.connect(address=args.address)  # connects to specific Myo unless arg.address is none.
     # Setup Myo mode, buzzes when ready.
@@ -73,18 +66,7 @@ def listen_on_myo():
         print("\nDisconnected")
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(
-        description='Connects to OSC server that send data from MYO')
-    parser.add_argument('-a', '--address', dest='address',
-                        help='Write down numbers that represent port where is data sended".')
-
-    args = parser.parse_args()
-    port_for_sending = None
-    default_port = 3002
-    if args.address:
-        port_for_sending = args.address
-    else:
-        port_for_sending = default_port
+def run(port_for_sending):
     listen_on_myo()
+    global osc_client
     osc_client = udp_client.SimpleUDPClient("localhost", port_for_sending)  # OSC Client for sending messages.
