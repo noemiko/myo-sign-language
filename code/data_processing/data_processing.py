@@ -2,7 +2,7 @@ import os
 import pandas as pd
 from data_processing.preprocessors import remove_timestamp
 
-DATA_FOLDER = 'duplicated_imu_data'
+DATA_FOLDER = 'data/duplicated_imu_data'
 
 
 def process_from_files():
