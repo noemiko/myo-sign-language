@@ -108,37 +108,37 @@ def learn():
 
                 # # # different svm
                 models = []
-                # models.append(('kneighboard ', KNeighborsClassifier(
-                #     algorithm='auto',
-                #     leaf_size=30,
-                #     metric='manhattan',
-                #     metric_params=None,
-                #     n_jobs=1,
-                #     n_neighbors=1,
-                #     p=1,
-                #     weights='distance')))
-                # models.append(('extra tree entropy', ExtraTreesClassifier(bootstrap=False, class_weight=None, criterion='gini',
-                #                                        max_depth=None, max_features='log2',
-                #                                        max_leaf_nodes=None, min_impurity_decrease=0.0,
-                #                                        min_impurity_split=None, min_samples_leaf=1,
-                #                                        min_samples_split=2, min_weight_fraction_leaf=0.0,
-                #                                        n_estimators=1024, n_jobs=1, oob_score=False, random_state=1,
-                #                                        verbose=False, warm_start=False)))
-                # models.append(('random trees',
-                #                sklearn.ensemble.RandomForestClassifier(bootstrap=True, class_weight=None,
-                #                                                        criterion='entropy',
-                #                                                        max_depth=None, max_features='log2',
-                #                                                        max_leaf_nodes=None,
-                #                                                        min_impurity_decrease=0.0,
-                #                                                        min_impurity_split=None,
-                #                                                        min_samples_leaf=1, min_samples_split=2,
-                #                                                        min_weight_fraction_leaf=0.0, n_estimators=231,
-                #                                                        n_jobs=1,
-                #                                                        oob_score=False, random_state=2, verbose=False,
-                #                                                        warm_start=False)))
-                # #
+                models.append(('kneighboard ', KNeighborsClassifier(
+                    algorithm='auto',
+                    leaf_size=30,
+                    metric='manhattan',
+                    metric_params=None,
+                    n_jobs=1,
+                    n_neighbors=1,
+                    p=1,
+                    weights='distance')))
+                models.append(('extra tree entropy', ExtraTreesClassifier(bootstrap=False, class_weight=None, criterion='gini',
+                                                       max_depth=None, max_features='log2',
+                                                       max_leaf_nodes=None, min_impurity_decrease=0.0,
+                                                       min_impurity_split=None, min_samples_leaf=1,
+                                                       min_samples_split=2, min_weight_fraction_leaf=0.0,
+                                                       n_estimators=1024, n_jobs=1, oob_score=False, random_state=1,
+                                                       verbose=False, warm_start=False)))
+                models.append(('random trees',
+                               sklearn.ensemble.RandomForestClassifier(bootstrap=True, class_weight=None,
+                                                                       criterion='entropy',
+                                                                       max_depth=None, max_features='log2',
+                                                                       max_leaf_nodes=None,
+                                                                       min_impurity_decrease=0.0,
+                                                                       min_impurity_split=None,
+                                                                       min_samples_leaf=1, min_samples_split=2,
+                                                                       min_weight_fraction_leaf=0.0, n_estimators=231,
+                                                                       n_jobs=1,
+                                                                       oob_score=False, random_state=2, verbose=False,
+                                                                       warm_start=False)))
+                #
                 models.append(('svm poly', svm.SVC(kernel='rbf', gamma=1.0, C=0.001)))
-                # models.append(('gaussian nb', GaussianNB()))
+                models.append(('gaussian nb', GaussianNB()))
 
                 # results = []
                 # names = []

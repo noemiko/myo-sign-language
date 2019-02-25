@@ -1,6 +1,6 @@
 import argparse
-from data_saver.myo_connector import run as myo_listen
-from data_saver.recorder import run as run_recording
+from myo_sign_language.data_saver.myo_connector import run as myo_listen
+from myo_sign_language.data_saver.recorder import run as run_recording
 
 default_port = 3002
 

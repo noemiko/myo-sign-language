@@ -38,3 +38,9 @@ Run bellow command to listen on OSC server that send data from myo
 python run_recorder.py --recording --address 4000
 
 ```
+
+# Run tests
+
+```
+pytest
+```
