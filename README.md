@@ -25,17 +25,19 @@ results were obtained showing performance of 91%.
 source venv/bin/activate --ppython 3.6.5
 source venv/bin/activate
 pip install -r requirements.txt
+python setup.py develop
+
 ```
 
 Run bellow command to connect to already
 running Myo command and send by OSC protocole data from thin armband
 ```
-python run_recorder.py --myo --address 4000
+python code/myo_sign_language/run_recorder.py --myo --address 4000
 ```
 
 Run bellow command to listen on OSC server that send data from myo
 ```
-python run_recorder.py --recording --address 4000
+python code/myo_sign_language/run_recorder.py --recording --address 4000
 
 ```
 

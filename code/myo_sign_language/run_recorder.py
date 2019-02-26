@@ -17,8 +17,8 @@ parser = argparse.ArgumentParser(
                 'and server that listen on data from osc server and save it on disk')
 
 parser.add_argument('-a', '--address', dest='address', type=check_positive_integer,
-                    help=f'Write down numbers that represent port where is data sended,'
-                         ' if not defined default is {default_port}')
+                    help='Write down numbers that represent port where is data sended,'
+                         f' if not defined default is {default_port}')
 
 parser.add_argument('-m', '--myo', dest='myo', action='store_true',
                     help='listen on myo data and send it to defined port in -a')
@@ -39,11 +39,11 @@ def run_server_by_params(port, user_args):
         try:
             myo_listen(port)
         except OSError as error:
-            print(f"Please use another port than `{port}` to serve data from myo. Because this one is busy.")
+            print(error)
     elif user_args.recording:
         try:
             run_recording(port)
-        except OSError as error:
+        except OSError:
             print(f"Please use another port than {port}"
                   f" to listen on data from myo served by osc server. Because this one is busy.")
     else:
