@@ -55,9 +55,10 @@ def process_file(file_dir):
 def save_file_with_new_content(content, dir):
     with open(dir, 'w') as csvfile:
         writer = csv.writer(csvfile, delimiter=',', quoting=csv.QUOTE_ALL)
-        schema = ["timestamp", "acc1", "acc2", "acc3", "gyro1", "gyro2", "gyro3", "orientation1",
-                  "orientation2", "orientation3", "orientation4", "emg1", "emg2", "emg3", "emg4", "emg5",
-                  "emg6", "emg7", "emg8"]
+        schema = ["timestamp", "emg1", "emg2", "emg3", "emg4", "emg5",
+                  "emg6", "emg7", "emg8", "acc1", "acc2", "acc3",
+                  "gyro1", "gyro2", "gyro3",
+                  "orientation1", "orientation2", "orientation3", "orientation4", ]
         writer.writerow([g for g in schema])
         writer.writerows(content)
     return True
@@ -76,38 +77,44 @@ def create_proper_file_format(rows):
             acc = [row[2], row[3], row[4]]
             gyro = [row[6], row[7], row[8]]
             orientation = [row[10], row[11], row[12], row[13]]
-            imu_data = []
-            imu_data.extend(acc + gyro + orientation)
-            emg_data = get_emg_data_around_imu(index, rows)
-            if emg_data:
-                processed_file.append(emg_data + imu_data)
+            imu_data = acc + gyro + orientation
+            emg_data_around = get_emg_data_around_imu(index, rows)
+            for emg in emg_data_around:
+                processed_file.append(emg + imu_data)
     return processed_file
 
 
 def get_emg_data_around_imu(imu_index, file_rows):
     """
-    In file may be twoo rows with emg data before and after imu.
+    In file may be two rows with emg data before and after imu.
     """
-    for i in range(-2, 3):
-        if i == 0:
-            continue
-        elif imu_index == 0:
-            continue
+    emg_indexes = []
+    if imu_index == 0:
+        emg_indexes = [1, 2]
+    elif imu_index == 1:
+        emg_indexes = [-1, 1, 2]
+    else:
+        emg_indexes = [-2, -1, 1, 2]
+    for emg_index in emg_indexes:
         try:
-            return get_processed_emg(file_rows[imu_index + i])
+            yield get_formatted_emg(file_rows[imu_index + emg_index])
         except IndexError:
-            if imu_index + i > 490:
-                continue
-            else:
-                raise
+            pass
 
 
-def get_processed_emg(emg_row):
-    for index, emg in enumerate(emg_row):
-        if index == 0 or index == 1 or index == 10:
-            continue
-        emg_row[index] = emg
-    return [emg_row[0], emg_row[2], emg_row[3], emg_row[4], emg_row[5], emg_row[6], emg_row[7], emg_row[8], emg_row[9]]
+def get_formatted_emg(emg_row):
+    """
+    :param emg_row: dict [str] one row that represent data from Electromyograph sensor
+    example:
+    ['2018-07-04T17:39:53.743240', 'emg', '-1', '-6', '-9', '-9', '1', '1', '-1', '-2', '2018-07-04T17:39:53.742082']
+    :return:
+    example:
+    ['2018-07-04T17:39:53.743240', 'emg', '-1', '-6', '-9', '-9', '1', '1', '-1', '-2']
+    """
+    new_emg_row = emg_row.copy()
+    new_emg_row.pop(1)  # remove 'emg' word
+    new_emg_row.pop(9)  # remove last timestamp
+    return new_emg_row
 
 
 def create_dir(folder_name, directory):
@@ -118,6 +125,7 @@ def create_dir(folder_name, directory):
         return new_dir
     except OSError as e:
         if e.errno != errno.EEXIST:
+            print(e)
             raise
     return new_dir
 
