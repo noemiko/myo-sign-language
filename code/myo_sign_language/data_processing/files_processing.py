@@ -1,18 +1,18 @@
 import os
 import pandas as pd
-from myo_sign_language.data_processing.preprocessors import fourier
+# from myo_sign_language.data_processing.preprocessors import fourier
+from typing import Mapping, MutableMapping, Sequence, Iterable, List, Set
 
-DATA_FOLDER = '../data/one_line_per_all_sensors'
-
-
-def process_from_files():
+def process_from_files(filename):
     """
     Get data from all files defined in DATA FOLDER and
     sort them by class
     :return: dict[list, list]
     """
     sorted_by_class_data = dict()
-    for root, dirs, files in os.walk(DATA_FOLDER):
+
+    data_path = os.path.realpath(os.path.join(__file__, '..', '..', 'data', filename))
+    for root, dirs, files in os.walk(data_path):
         for name in files:
             file_path = os.path.join(root, name)
             file_array = pd.read_csv(file_path)
@@ -30,7 +30,16 @@ def process_file_by_params(file,
                            orientation_process=None,
                            gyro_process=None,
                            emg_process=None,
-                           acc_process=None):
+                           acc_process=None)->List[List[int]]:
+    """
+
+    :param file:
+    :param orientation_process:
+    :param gyro_process:
+    :param emg_process:
+    :param acc_process:
+    :return: List[List[int]] Data separated for each sensor (max 18)
+    """
     file_without_time = file.drop(labels=['timestamp'], axis=1)
     numeric_file = file_without_time.apply(pd.to_numeric)
 
@@ -56,7 +65,9 @@ def process_file_by_params(file,
     concat_process(numeric_acc, acc_process)
     concat_process(numeric_emg, emg_process)
 
-    return pd.concat(to_concat, sort=False, axis=1)
+
+    concatenated = pd.concat(to_concat, sort=False, axis=1)
+    return concatenated.values.transpose().tolist()
 
 
 def get_move_index(name):
@@ -79,4 +90,3 @@ def validate_move_number(move_index):
     if int(move_index) not in range(19):
         raise ValueError(f"Wrong move number {move_index}. Is should be between 1 nad 18")
     return move_index
-

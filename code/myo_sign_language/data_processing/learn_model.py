@@ -21,7 +21,7 @@ from sklearn.model_selection import train_test_split
 from matplotlib import pyplot as plt
 from sklearn import model_selection
 from sklearn.datasets import fetch_california_housing
-from data_processing import process_from_files
+from myo_sign_language.data_processing.files_processing import process_from_files
 
 import itertools
 from scipy.signal import butter, lfilter, medfilt
@@ -31,33 +31,17 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.decomposition import PCA
 from sklearn.feature_selection import f_regression
 from sklearn.ensemble import ExtraTreesClassifier
+from typing import Mapping, MutableMapping, Sequence, Iterable, List, Set
+import more_itertools as mit
 
 TESTING_DATA_PERCENT = 0.3
 TEACHING_DATA_PERCENT = 0.7
 ROWS_IN_TIME_WINDOW = 50
 N_CLUSTERS = 10  # 9, 14, 17, 18, 22
 
-
-
 SENSORS_NAMES = ["acc1", "acc2", "acc3", "gyro1", "gyro2", "gyro3",
                  "orientation1", "orientation2", "orientation3", "orientation4",
                  "emg1", "emg2", "emg3", "emg4", "emg5", "emg6", "emg7", "emg8"]
-
-
-def test_filter_on_sensors_data(array_with_columns_as_row, filter):
-    for row in array_with_columns_as_row:
-        yield filter(row)
-
-
-def windowed_view(arr, window, overlap):
-    import numpy as np
-    from numpy.lib.stride_tricks import as_strided
-    arr = np.asarray(arr)
-    window_step = window - overlap
-    new_shape = arr.shape[:-1] + ((arr.shape[-1] - overlap) // window_step, window)
-    new_strides = (arr.strides[:-1] + (window_step * arr.strides[-1],) +
-                   arr.strides[-1:])
-    return as_strided(arr, shape=new_shape, strides=new_strides).tolist()
 
 
 def learn():
@@ -65,105 +49,54 @@ def learn():
     overlaped = 5
     # windows_size = 10
     # clusters = 5
-    data_set = process_from_files()
+    data_set = process_from_files('test')
+    print('get data set')
     classes_names_as_is_in_data = create_classes_names_list(data_set)
-    print(len(classes_names_as_is_in_data))
+    print(f'get {len(classes_names_as_is_in_data)} classes')
+
     files_as_nested_list = get_files_as_list_of_lists(data_set)
-    print("start testing")
-    for clusters in [5]:
-        windows_sizes = [5]
+    print(f"extract data for {len(files_as_nested_list)} files with {len(files_as_nested_list[0])} columns")
+    for clusters in [5, 10, 20]:
+        windows_sizes = [5, 10, 20]
         for windows_size in windows_sizes:
-            # if windows_size == 5:
-            #     overlaps = [1, 4]
-            # elif windows_size == 10:
-            #     overlaps = [1, 5, 9]
-            # elif windows_size == 15:
-            #     overlaps = [1, 7, 14]
-            # elif windows_size == 20:
-            #     overlaps = [1, 10, 19]
-            # elif windows_size == 25:
-            #     overlaps = [1, 13, 24]
-            # elif windows_size == 30:
-            #     overlaps = [1, 15, 29]
-            # elif windows_size == 35:
-            #     overlaps = [1, 19, 34]
-            # elif windows_size == 40:
-            #     overlaps = [1, 20, 39]
-            for overlaped in [2]:
+            if windows_size == 5:
+                overlaps = [1, 4]
+            elif windows_size == 10:
+                overlaps = [1, 5, 9]
+            elif windows_size == 15:
+                overlaps = [1, 7, 14]
+            elif windows_size == 20:
+                overlaps = [1, 10, 19]
+            elif windows_size == 25:
+                overlaps = [1, 13, 24]
+            elif windows_size == 30:
+                overlaps = [1, 15, 29]
+            elif windows_size == 35:
+                overlaps = [1, 19, 34]
+            elif windows_size == 40:
+                overlaps = [1, 20, 39]
+            for overlaped in overlaps:
                 X_train, X_test, _, y_test = train_test_split(files_as_nested_list, classes_names_as_is_in_data,
                                                               test_size=0.9, random_state=4564567, shuffle=True)
 
-                # files_as_windows_train = get_files_as_windows(X_train, windows_size, overlaped)
-                files_as_windows_test = get_files_as_windows(X_test, windows_size, overlaped)
-
-                all_sliding_windows = get_all_sliding_windows(X_train, windows_size, overlaped)
+                files_as_windows_test = get_overlapped_chunks_separated_for_files(X_test, windows_size, overlaped)
+                all_sliding_windows = get_all_overlapped_chunks(X_train, windows_size, overlaped)
+                print(f'Generate {len(all_sliding_windows)} windows to create codebook')
                 kmeans_models = prepare_codebook(all_sliding_windows, clusters)
-
+                print(f'create {len(kmeans_models)} models')
                 histograms_test = get_histogram_basic_on_kmean(clusters, kmeans_models, files_as_windows_test)
 
-                X_train, X_test, y_train1, y_test1 = train_test_split(histograms_test, y_test,
-                                                                      test_size=0.3, random_state=456547, shuffle=True)
-
                 # find_the_best(X_train, X_test, y_train1, y_test1)
+                models = get_models()
 
-                # # # different svm
-                models = []
-                models.append(('kneighboard ', KNeighborsClassifier(
-                    algorithm='auto',
-                    leaf_size=30,
-                    metric='manhattan',
-                    metric_params=None,
-                    n_jobs=1,
-                    n_neighbors=1,
-                    p=1,
-                    weights='distance')))
-                models.append(('extra tree entropy', ExtraTreesClassifier(bootstrap=False, class_weight=None, criterion='gini',
-                                                       max_depth=None, max_features='log2',
-                                                       max_leaf_nodes=None, min_impurity_decrease=0.0,
-                                                       min_impurity_split=None, min_samples_leaf=1,
-                                                       min_samples_split=2, min_weight_fraction_leaf=0.0,
-                                                       n_estimators=1024, n_jobs=1, oob_score=False, random_state=1,
-                                                       verbose=False, warm_start=False)))
-                models.append(('random trees',
-                               sklearn.ensemble.RandomForestClassifier(bootstrap=True, class_weight=None,
-                                                                       criterion='entropy',
-                                                                       max_depth=None, max_features='log2',
-                                                                       max_leaf_nodes=None,
-                                                                       min_impurity_decrease=0.0,
-                                                                       min_impurity_split=None,
-                                                                       min_samples_leaf=1, min_samples_split=2,
-                                                                       min_weight_fraction_leaf=0.0, n_estimators=231,
-                                                                       n_jobs=1,
-                                                                       oob_score=False, random_state=2, verbose=False,
-                                                                       warm_start=False)))
-                #
-                models.append(('svm poly', svm.SVC(kernel='rbf', gamma=1.0, C=0.001)))
-                models.append(('gaussian nb', GaussianNB()))
-
-                # results = []
-                # names = []
-                # # seed = 7
-                # # scoring = 'accuracy'
-                # # from sklearn.feature_selection import RFE
-                rezultaty = ""
                 for name, model in models:
-                    # # print('start testing model {}'.format(name))
-                    # # rfe = PCA(model)
-                    # # rfe = rfe.fit(X_train, y_train)
-                    # # # summarize the selection of the attributes
-                    # # print(rfe)
-                    # # print(rfe.ranking_)
-                    kfold = model_selection.RepeatedKFold(n_splits=5, random_state=7456456, n_repeats=10)
-                    # print(name)
-                    selection = svc_param_selection(histograms_test, y_test, kfold, model, name)
-                    print(selection)
-                    # # model.fit(histograms_train, y_train)
-                    # cv_results = model_selection.cross_val_score(model, histograms_test, y_test, cv=kfold, scoring='accuracy')
-                    # # msg = " %f (%f)" % (cv_results.mean(), cv_results.std())
-                    # # print(name+" ", msg)
-                    # # rezultaty+=str(cv_results.mean())+","+str(cv_results.std())+","
-                    # msg = "%s: %f (%f)" % (name, cv_results.mean(), cv_results.std())
-                    # print(msg)
+                    kfold = model_selection.RepeatedKFold(n_splits=5, random_state=7, n_repeats=10)
+                    # selection = svc_param_selection(histograms_test, y_test, kfold, model, name)
+                    # print(selection)
+                    cv_results = model_selection.cross_val_score(model, histograms_test, y_test, cv=kfold,
+                                                                 scoring='accuracy')
+                    msg = "%s: %f (%f)" % (name, cv_results.mean(), cv_results.std())
+                    print(msg)
                     # # labels = ['ME', 'OFTEN', 'RARE','PAIN','HEAD',
                     # #           'TOOTH','THROAT','BACK','LUNGS','VOMIT',
                     # #           'COUGH','RUNNY NOSE','FEVER', 'COLD', 'SWEAT',
@@ -239,58 +172,77 @@ def svc_param_selection(X, y, nfolds, kn, kernel_name):
     return grid_search.best_params_
 
 
-def get_files_as_windows(files_as_nested_list, windows_size, overlaped):
-    files_as_windows = []
+def get_overlapped_chunks_separated_for_files(
+        files_as_nested_list: List[List[int]],
+        windows_size: int,
+        overlaped: int) -> List[List[List[List[int]]]]:
+    files_as_overplaped_chunks = []
     for file in files_as_nested_list:
 
-        file_windows = []
+        file_chunked = []
         for index, sensor in enumerate(file):
-            windows = windowed_view(sensor, windows_size, overlaped)
-            file_windows.append(windows)
-        files_as_windows.append(file_windows)
-    return files_as_windows
+            windows = get_overlapped_chunks(sensor, windows_size, overlaped)
+            file_chunked.append(windows)
+        files_as_overplaped_chunks.append(file_chunked)
+    return files_as_overplaped_chunks
 
 
-def get_all_sliding_windows(files_as_nested_list, windows_size, overlaped):
-    all_sliding_windows = [[] for _ in range(len(files_as_nested_list[0]))]
-    for file in files_as_nested_list:
-
+def get_all_overlapped_chunks(
+        files: List[List[int]],
+        window_size: int,
+        overlaped: int) -> List[List[List[int]]]:
+    number_of_sensor = len(files[0])
+    windowed_sensors = [[] for _ in range(number_of_sensor)]
+    for file in files:
         for index, sensor in enumerate(file):
-            # sensor = sensor.values
-            windows = windowed_view(sensor, windows_size, overlaped)
-            all_sliding_windows[index].extend(windows)
-    return all_sliding_windows
+            windows = get_overlapped_chunks(sensor, window_size, overlaped)
+            windowed_sensors[index].extend(windows)
+    return windowed_sensors
 
 
-def get_histogram_basic_on_kmean(clusters_number, kmeans_models, files_as_windows):
+def get_overlapped_chunks(arr, window, overlap):
+    import numpy as np
+    from numpy.lib.stride_tricks import as_strided
+    arr = np.asarray(arr)
+    window_step = window - overlap
+
+    new_shape = arr.shape[:-1] + ((arr.shape[-1] - overlap) // window_step, window)
+    new_strides = (arr.strides[:-1] + (window_step * arr.strides[-1],) +
+                   arr.strides[-1:])
+    return as_strided(arr, shape=new_shape, strides=new_strides).tolist()
+
+
+def get_histogram_basic_on_kmean(
+        clusters_number: int,
+        kmeans_models: List[KMeans],
+        files_as_windows: List[List[Set[int]]]
+) -> List[List[int]]:
     # print('get histogram')
+    from collections import Counter
     histograms = []
     for file in files_as_windows:
         file_histogram = []
-        for index, sensor_data_as_windows in enumerate(file):
-            predicted_list = kmeans_models[index].predict(sensor_data_as_windows)
-            from collections import Counter
+        for index, windowed_sensor in enumerate(file):
+            predicted_list = kmeans_models[index].predict(windowed_sensor)
             histogram = dict(Counter(predicted_list))
             for key in range(0, clusters_number):
                 if key not in histogram.keys():
                     histogram[key] = 0
             d = dict(sorted(histogram.items()))
             histogram = list(d.values())
-            # normalized_histogram = [float(i) / sum(histogram) for i in histogram]
             file_histogram.extend(histogram)
         histograms.append(file_histogram)
     return histograms
 
 
-def prepare_codebook(all_sliding_windows, number_of_clusters):
-    # print('start prepare codebook')
+def prepare_codebook(all_sliding_windows: List[Set[int]], number_of_clusters: int):
+    print('start prepare codebook')
     kmeans_models = []
     for index, sensor_all_windows in enumerate(all_sliding_windows):
-        kmean_model = get_kmeans_model(sensor_all_windows, number_of_clusters)
-        filename = '{}.sav'.format(SENSORS_NAMES[index])
+        kmean_model = KMeans(n_clusters=number_of_clusters).fit(sensor_all_windows)
+        # filename = '{}.sav'.format(SENSORS_NAMES[index])
         # pickle.dump(kmean_model, open('codebook_models/'+filename, 'wb'))
         kmeans_models.append(kmean_model)
-    # print('end prepare codebook')
     return kmeans_models
 
 
@@ -449,33 +401,8 @@ def genetic_algorithm(X_train, X_test, y_train, y_test):
     print(tpot.score(X_test, y_test))
 
 
-def get_time_window(nested_file, rows_in_window):
-    for index in range(10, len(nested_file), rows_in_window):
-        yield nested_file[index - 10:index + rows_in_window]
-
-
 def get_kmeans_model(clusters, clusters_group):
-    # min_kmean = None
-    # min_sum_of_kmean = 100000000
-    # for i in range(0, 1):
     return KMeans(n_clusters=clusters_group).fit(clusters)
-    #     sum_euclidean = 0
-    #     for cluster1, cluster2 in itertools.combinations(kmeans.cluster_centers_, 2):
-    #         sum_euclidean += euclidean(cluster1, cluster2)
-    #     if sum_euclidean < min_sum_of_kmean:
-    #         min_kmean = kmeans.labels_
-    # return min_kmean
-
-
-def get_created_group_as_flat_list(list_of_list):
-    return [item for sublist in list_of_list for item in sublist]
-
-
-def file_as_one_row(nested_file):
-    flat_rows = []
-    for row in nested_file:
-        flat_rows.extend(row)
-    return flat_rows
 
 
 def create_classes_names_list(training_set):
@@ -489,10 +416,6 @@ def create_classes_names_list(training_set):
     return learn_classes_list
 
 
-def get_flat_list_as_nested(file_as_one_row):
-    return list(zip(*[iter(file_as_one_row)] * 18))
-
-
 def get_files_as_list_of_lists(data_set):
     """
     :param data_set: dict(list[list], list[[list])
@@ -504,112 +427,43 @@ def get_files_as_list_of_lists(data_set):
     return files
 
 
-def separate_data_set_to_testing_and_teaching(data_separated_by_class):
-    """
-
-    :param data_set:list[list[list]]
-    :return: list[list]
-    """
-    learn_classes_list = []
-    test_classes_list = []
-    for class_files in data_separated_by_class:
-        pass
-        #     training_number_of_classes = int(len(files)*TEACHING_DATA_PERCENT)
-        #     testing_number_of_classes = int(len(files)*TESTING_DATA_PERCENT)
-        #     get_nested_list_as_flat_list
-        #     learn_classes_list.extend(v[:training_number_of_classes])
-        #     test_classes_list.extend(v[-testing_number_of_classes:])
-        # return learn_classes_list, test_classes_list
-        # """
-        # :param data_set: dict(list, list)
-        # :return: (list[list], list[list])
-        # """
-        # learn_classes_list = []
-        # test_classes_list = []
-        # for k, v in data_set.items():
-        #     training_number_of_classes = int(len(v)*TEACHING_DATA_PERCENT)
-        #     testing_number_of_classes = int(len(v)*TESTING_DATA_PERCENT)
-        #
-        #     learn_classes_list.extend(v[:training_number_of_classes])
-        #     test_classes_list.extend(v[-testing_number_of_classes:])
-        # return learn_classes_list, test_classes_list
+def get_models():
+    models = []
+    models.append(('kneighboard ', KNeighborsClassifier(
+        algorithm='auto',
+        leaf_size=30,
+        metric='manhattan',
+        metric_params=None,
+        n_jobs=1,
+        n_neighbors=1,
+        p=1,
+        weights='distance')))
+    models.append(
+        ('extra tree entropy', ExtraTreesClassifier(bootstrap=False, class_weight=None, criterion='gini',
+                                                    max_depth=None, max_features='log2',
+                                                    max_leaf_nodes=None, min_impurity_decrease=0.0,
+                                                    min_impurity_split=None, min_samples_leaf=1,
+                                                    min_samples_split=2, min_weight_fraction_leaf=0.0,
+                                                    n_estimators=1024, n_jobs=1, oob_score=False,
+                                                    random_state=1,
+                                                    verbose=False, warm_start=False)))
+    models.append(('random trees',
+                   sklearn.ensemble.RandomForestClassifier(bootstrap=True, class_weight=None,
+                                                           criterion='entropy',
+                                                           max_depth=None, max_features='log2',
+                                                           max_leaf_nodes=None,
+                                                           min_impurity_decrease=0.0,
+                                                           min_impurity_split=None,
+                                                           min_samples_leaf=1, min_samples_split=2,
+                                                           min_weight_fraction_leaf=0.0, n_estimators=231,
+                                                           n_jobs=1,
+                                                           oob_score=False, random_state=2, verbose=False,
+                                                           warm_start=False)))
+    #
+    models.append(('svm poly', svm.SVC(kernel='rbf', gamma=1.0, C=0.001)))
+    models.append(('gaussian nb', GaussianNB()))
+    return models
 
 
 if __name__ == "__main__":
     learn()
-# PCA(copy=True, iterated_power='auto', n_components=8, random_state=None,
-#     svd_solver='auto', tol=0.0, whiten=True)
-# ()
-# ('Best classifier:\n', ExtraTreesClassifier(bootstrap=False, class_weight=None, criterion='entropy',
-#                                             max_depth=None, max_features='sqrt', max_leaf_nodes=None,
-#                                             min_impurity_decrease=0.0, min_impurity_split=None,
-#                                             min_samples_leaf=1, min_samples_split=2,
-#                                             min_weight_fraction_leaf=0.0, n_estimators=156, n_jobs=1,
-#                                             oob_score=False, random_state=3, verbose=False,
-#                                             warm_start=False))
-# {'learner': ExtraTreesClassifier(bootstrap=False, class_weight=None, criterion='entropy',
-#                                  max_depth=None, max_features='sqrt', max_leaf_nodes=None,
-#                                  min_impurity_decrease=0.0, min_impurity_split=None,
-#                                  min_samples_leaf=1, min_samples_split=2,
-#                                  min_weight_fraction_leaf=0.0, n_estimators=156, n_jobs=1,
-#                                  oob_score=False, random_state=3, verbose=False,
-#                                  warm_start=False),
-#  'preprocs': (PCA(copy=True, iterated_power='auto', n_components=8, random_state=None,
-#                   svd_solver='auto', tol=0.0, whiten=True),), 'ex_preprocs': ()}
-# ()
-
-# Best preprocessing pipeline:
-# MinMaxScaler(copy=True, feature_range=(0.0, 1.0))
-# ()
-# ('Best classifier:\n', KNeighborsClassifier(algorithm='auto', leaf_size=30, metric='manhattan',
-#            metric_params=None, n_jobs=1, n_neighbors=2, p=1,
-#            weights='distance'))
-# {'learner': KNeighborsClassifier(algorithm='auto', leaf_size=30, metric='manhattan',
-#            metric_params=None, n_jobs=1, n_neighbors=2, p=1,
-#            weights='distance'), 'preprocs': (MinMaxScaler(copy=True, feature_range=(0.0, 1.0)),), 'ex_preprocs': ()}
-# ()
-# ('Prediction accuracy in generalization is ', '75.22935779816514')
-# --------------------------------------------------
-# ('Best classifier:\n', SVC(C=80734.0273761, cache_size=512, class_weight=None, coef0=0,
-#   decision_function_shape='ovr', degree=4.0, gamma=818.46647261,
-#   kernel='poly', max_iter=278593425.0, probability=False, random_state=4,
-#   shrinking=False, tol=0.000639665051648, verbose=False))
-# {'learner': SVC(C=80734.0273761, cache_size=512, class_weight=None, coef0=0,
-#   decision_function_shape='ovr', degree=4.0, gamma=818.46647261,
-#   kernel='poly', max_iter=278593425.0, probability=False, random_state=4,
-#   shrinking=False, tol=0.000639665051648, verbose=False), 'preprocs': (Normalizer(copy=True, norm='l2'),), 'ex_preprocs': ()}
-# ()
-# ('Prediction accuracy in generalization is ', '76.87074829931973')
-# ('Best classifier:\n', ExtraTreesClassifier(bootstrap=False, class_weight=None, criterion='entropy',
-#            max_depth=None, max_features=0.171769356288,
-#            max_leaf_nodes=None, min_impurity_decrease=0.0,
-#            min_impurity_split=None, min_samples_leaf=1,
-#            min_samples_split=2, min_weight_fraction_leaf=0.0,
-#            n_estimators=1650, n_jobs=1, oob_score=False, random_state=3,
-#            verbose=False, warm_start=False))
-# {'learner': ExtraTreesClassifier(bootstrap=False, class_weight=None, criterion='entropy',
-#            max_depth=None, max_features=0.171769356288,
-#            max_leaf_nodes=None, min_impurity_decrease=0.0,
-#            min_impurity_split=None, min_samples_leaf=1,
-#            min_samples_split=2, min_weight_fraction_leaf=0.0,
-#            n_estimators=1650, n_jobs=1, oob_score=False, random_state=3,
-#            verbose=False, warm_start=False), 'preprocs': (), 'ex_preprocs': ()}
-# ()
-# ('Prediction accuracy in generalization is ', '84.34782608695653')
-# ('Best classifier:\n', ExtraTreesClassifier(bootstrap=False, class_weight=None, criterion='gini',
-#            max_depth=None, max_features=0.441871701219,
-#            max_leaf_nodes=None, min_impurity_decrease=0.0,
-#            min_impurity_split=None, min_samples_leaf=2,
-#            min_samples_split=2, min_weight_fraction_leaf=0.0,
-#            n_estimators=1442, n_jobs=1, oob_score=False, random_state=2,
-#            verbose=False, warm_start=False))
-# {'learner': ExtraTreesClassifier(bootstrap=False, class_weight=None, criterion='gini',
-#            max_depth=None, max_features=0.441871701219,
-#            max_leaf_nodes=None, min_impurity_decrease=0.0,
-#            min_impurity_split=None, min_samples_leaf=2,
-#            min_samples_split=2, min_weight_fraction_leaf=0.0,
-#            n_estimators=1442, n_jobs=1, oob_score=False, random_state=2,
-#            verbose=False, warm_start=False), 'preprocs': (PCA(copy=True, iterated_power='auto', n_components=32, random_state=None,
-#   svd_solver='auto', tol=0.0, whiten=True),), 'ex_preprocs': ()}
-# ()
-# ('Prediction accuracy in generalization is ', '6.9364161849710975')

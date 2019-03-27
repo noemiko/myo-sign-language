@@ -41,6 +41,25 @@ python code/myo_sign_language/run_recorder.py --recording --address 4000
 
 ```
 
+When data is saved in `code/myo_sign_language/data/raw_data
+then you should process them to format that is easier to process.
+
+I decided on such a solution when locally searching for the appropriate formats,
+because there is no need for every time I check a solution, format all files again.
+
+By default formatted data is saved in `code/myo_sign_language/data/processed_data`
+```
+python code/myo_sign_language/data_processing/process_to_csv.py
+```
+
+sudo apt-get install python3-tk
+
+then you could get models by using command
+```
+python code/myo_sign_language/data_processing/learn_model.py
+```
+
+
 # Run tests
 
 ```

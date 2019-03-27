@@ -2,6 +2,9 @@ import csv
 import os, errno
 from dateutil.parser import parse
 
+# folder from myo_sign_language/data directory
+FOLDER_TO_SAVE_FORMATTED_DATA = 'processed_data'
+
 
 def process_to_new_csv_format():
     """
@@ -108,8 +111,9 @@ def get_formatted_emg(emg_row):
     example:
     ['2018-07-04T17:39:53.743240', 'emg', '-1', '-6', '-9', '-9', '1', '1', '-1', '-2', '2018-07-04T17:39:53.742082']
     :return:
+    formatted emg row
     example:
-    ['2018-07-04T17:39:53.743240', 'emg', '-1', '-6', '-9', '-9', '1', '1', '-1', '-2']
+    ['2018-07-04T17:39:53.743240', '-1', '-6', '-9', '-9', '1', '1', '-1', '-2']
     """
     new_emg_row = emg_row.copy()
     new_emg_row.pop(1)  # remove 'emg' word
@@ -118,7 +122,7 @@ def get_formatted_emg(emg_row):
 
 
 def create_dir(folder_name, directory):
-    dir_for_processed_files = os.path.join(directory, 'processed_imu_data')
+    dir_for_processed_files = os.path.join(directory, FOLDER_TO_SAVE_FORMATTED_DATA)
     new_dir = os.path.join(dir_for_processed_files, folder_name)
     try:
         os.makedirs(new_dir)
